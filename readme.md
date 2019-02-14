@@ -19,11 +19,14 @@ Use the ESP-12E WiFi module and the gyro sensor of your smartphone to control a 
     - Board: "NodeMCU 1.0 (ESP-12E Module)"
     - Flash Size: "4M (1M SPIFFS)"
 
-##Wiring
-enA ->  D1  (GPIO5)
-in1 ->  D2  (GPIO4)
-in2 ->  D5  (GPIO14)
-in3 ->  D6  (GPIO12)
-in4 ->  D7  (GPIO13)
-enB ->  D8  (GPIO15)
+## Wiring
+
+L298N | ESP2866
+------|-------------
+enA   | D1  (GPIO5)
+in1   | D2  (GPIO4)
+in2   | D5  (GPIO14)
+in3   | D6  (GPIO12)
+in4   | D7  (GPIO13)
+enB   |D8  (GPIO15)
 
