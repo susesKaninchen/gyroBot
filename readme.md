@@ -1,6 +1,6 @@
-# ShowRobot
+# GyroRobot
 
-Use the ESP-12F WiFi module and the gyro sensor of your smartphone to control a robot
+Use the ESP-12E WiFi module and the gyro sensor of your smartphone to control a robot
 
 
 ## Components used in this in this project:
