@@ -30,3 +30,7 @@ in3   | D6  (GPIO12)
 in4   | D7  (GPIO13)
 enB   |D8  (GPIO15)
 
+##Usage
+
+- Upload the Arduino Sketch File with the recommended board settings.
+- Upload the html file by cklicking on "Tools" --> "ESP8266 Sketch Data Upload"
