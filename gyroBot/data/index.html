@@ -64,7 +64,7 @@
 
   var lastSend = 0;
   var maxX = garden.clientWidth  - ball.clientWidth;
-  var maxY = garden.clientHeight - ball.clientHeight;
+  var maxY = garden.clientHeight - ball.clientHeight;     
 
   function handleOrientation(event) {
     var x = event.beta;  // In degree in the range [-180,180]
@@ -91,11 +91,11 @@
         
     	//send x and y to esp
     	var xhttp = new XMLHttpRequest();
-      xhttp.open('GET', '?angleX='+Math.round(x)+'&angleY='+Math.round(y));
+      xhttp.open('GET', '?angleX='+Math.round(x)+'&angleY='+Math.round(y));                 
     	xhttp.send();
     }
   }
-  window.addEventListener('deviceorientation', handleOrientation);
+  window.addEventListener('deviceorientation', handleOrientation);    
   
   </script>
   

@@ -7,11 +7,14 @@
 
 //Defines for H bridge
 #define enA 5
-#define in1 4   //GPIO 1 blocks TX Serial Port
-#define in2 14   //GPIO 3 blocks RX Serial Port
+#define in1 4
+#define in2 14
 #define in3 12
 #define in4 13
 #define enB 15
+
+//Defines for specific motor
+#define DEAD_BAND 500
 
 // Replace with your network credentials
 const char* ssid     = "ESP2";
@@ -20,18 +23,17 @@ const char* password = "";
 bool accessPointMode = true;       //Use as a hotspot or connect to a local WiFi network
 
 const char* filename = "/index.html";
-int angleX = 0;
-int angleY = 0;
+int angleX = 90;
+int angleY = 90;
 bool deviceIsConnected = false;
 AsyncWebServer server(80);
 
 void setMotorSpeed(int leftMotor, int rightMotor) {
-  if (leftMotor < 800) {   //Turn left
-    analogWrite(enA, 1023 - leftMotor); // Send PWM signal to L298N Enable pin
+  if (leftMotor < - DEAD_BAND) {   //Turn left
+    analogWrite(enA, - leftMotor); // Send PWM signal to L298N Enable pin
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
-  } else if (leftMotor > 1040) {
-    leftMotor -= 1200;
+  } else if (leftMotor > DEAD_BAND) {
     analogWrite(enA, leftMotor); // Send PWM signal to L298N Enable pin
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
@@ -40,12 +42,11 @@ void setMotorSpeed(int leftMotor, int rightMotor) {
     digitalWrite(in2, LOW);
   }
 
-  if (rightMotor < 800) {   //Turn left
-    analogWrite(enB, 1023 - rightMotor); // Send PWM signal to L298N Enable pin
+  if (rightMotor < - DEAD_BAND) {   //Turn left
+    analogWrite(enB, - rightMotor); // Send PWM signal to L298N Enable pin
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
-  } else if (rightMotor > 1040) {
-    rightMotor -= 1200;
+  } else if (rightMotor > DEAD_BAND) {
     analogWrite(enB, rightMotor); // Send PWM signal to L298N Enable pin
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
@@ -57,7 +58,13 @@ void setMotorSpeed(int leftMotor, int rightMotor) {
 
 int angleToMotorSpeed (int angle) {
   long motorSpeed = 0;
-  motorSpeed = angle * (1023 / 90);
+  motorSpeed = angle * (1023 / 45) - 2048;
+  if (motorSpeed < -1023) {
+    motorSpeed = -1023;
+  }
+  if (motorSpeed > 1023) {
+    motorSpeed = 1023;
+  }
   return motorSpeed;
 }
 
@@ -129,10 +136,12 @@ void setup() {
       AsyncWebParameter* p = request->getParam(i);
       if (p->name() == "angleX") {
         angleX = p->value().toInt();
-        Serial.print("Angle x: " + String(angleX));
+        //Serial.print("Angle x:");
+        //Serial.println(angleX);
       } else if (p->name() == "angleY") {
         angleY = p->value().toInt();
-        Serial.println("Angle y: " + String(angleY));
+        //Serial.print("Angle y:");
+        //Serial.println(angleY);
       } else {
         Serial.print("unknown name: ");
         Serial.print(p->name());
@@ -140,11 +149,15 @@ void setup() {
         Serial.println(p->value().toInt());
       }
     }
-    request->send(SPIFFS, "/index.html");
+    if (request -> params() == 0) {
+      request->send(SPIFFS, "/index.html");
+    } else {
+      request -> send(200);
+    }
     //drawDirection();
   });
   server.begin();
- // delay(5000);
+  // delay(5000);
 
   //TEST
 
@@ -153,6 +166,14 @@ void setup() {
 
 void loop() {
   //Serial.println("Angle: " + String(angleX) + " " + String(angleY) + " ");
-  int newSpeed = angleToMotorSpeed(angleX);
-  setMotorSpeed(newSpeed, newSpeed);
+  int leftMotor = angleToMotorSpeed(angleX);
+  int rightMotor = leftMotor;
+  double steer = angleToMotorSpeed(angleY) / 1023.0;
+  if (steer < 0) {
+    leftMotor = leftMotor + steer * leftMotor;
+  } else {
+    rightMotor = rightMotor - steer * rightMotor;
+  }
+  setMotorSpeed(leftMotor, rightMotor);
+
 }
