@@ -1,9 +1,10 @@
 //#include "WiFi.h"
 #include <MFRC522.h>
 #include <SPI.h>
+#include <EEPROM.h>
 #include "ESPAsyncWebServer.h"
 #include "FS.h"   //Include File System Headers
-#include "SSD1306Spi.h"
+#include "config.h"
 
 //Defines for H bridge
 #define enA 5
@@ -22,19 +23,22 @@ const char* password = "";
 
 bool accessPointMode = true;       //Use as a hotspot or connect to a local WiFi network
 
+const char* filenameConfig = "/config.html";
 const char* filename = "/index.html";
 int angleX = 90;
 int angleY = 90;
 bool deviceIsConnected = false;
+int offsetLeft = 0;
+int offsetRight = 0;
 AsyncWebServer server(80);
 
 void setMotorSpeed(int leftMotor, int rightMotor) {
   if (leftMotor < - DEAD_BAND) {   //Turn left
-    analogWrite(enA, - leftMotor); // Send PWM signal to L298N Enable pin
+    analogWrite(enA, - (leftMotor - offsetLeft)); // Send PWM signal to L298N Enable pin
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
   } else if (leftMotor > DEAD_BAND) {
-    analogWrite(enA, leftMotor); // Send PWM signal to L298N Enable pin
+    analogWrite(enA, (leftMotor + offsetLeft)); // Send PWM signal to L298N Enable pin
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   } else {
@@ -43,11 +47,11 @@ void setMotorSpeed(int leftMotor, int rightMotor) {
   }
 
   if (rightMotor < - DEAD_BAND) {   //Turn left
-    analogWrite(enB, - rightMotor); // Send PWM signal to L298N Enable pin
+    analogWrite(enB, - (rightMotor - offsetRight)); // Send PWM signal to L298N Enable pin
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
   } else if (rightMotor > DEAD_BAND) {
-    analogWrite(enB, rightMotor); // Send PWM signal to L298N Enable pin
+    analogWrite(enB, (rightMotor + offsetRight)); // Send PWM signal to L298N Enable pin
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
   } else {
@@ -68,9 +72,35 @@ int angleToMotorSpeed (int angle) {
   return motorSpeed;
 }
 
+void setOfsets(int offsetL, int offsetR) {
+  offsetLeft = offsetL;
+  offsetRight = offsetR;
+  uint addr = 0;
+  int checksum = 42;
+  EEPROM.put(addr, 42);
+  addr = addr + sizeof(checksum);
+  EEPROM.put(addr, offsetLeft);
+  addr = addr + sizeof(offsetLeft);
+  EEPROM.put(addr, offsetRight);
+  EEPROM.commit();
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Setup Begin");
+  EEPROM.begin(512);
+  uint addr = 0;
+  int checksumR = 0;
+  int checksum = 42;
+  EEPROM.get(addr, checksumR);
+  Serial.println(String(checksumR));
+  if (checksum == checksum) {
+    addr = addr + sizeof(checksum);
+    EEPROM.get(addr, offsetLeft);
+    addr = addr + sizeof(offsetLeft);
+    EEPROM.get(addr, offsetRight);
+    Serial.println(offsetLeft + ":" + offsetRight);
+  }
   //Initialize H bridge
   pinMode(enA, OUTPUT);
   pinMode(enB, OUTPUT);
@@ -98,6 +128,7 @@ void setup() {
   }
 
   File f = SPIFFS.open(filename, "r");
+  File fe = SPIFFS.open(filenameConfig, "r");
 
   if (!f) {
     Serial.println("file open failed");
@@ -154,6 +185,30 @@ void setup() {
     } else {
       request -> send(200);
     }
+    //drawDirection();
+  });
+
+  server.on("/config", HTTP_GET, [](AsyncWebServerRequest * request) {
+    int paramsNr = request->params();
+    for (int i = 0; i < paramsNr; i++) {
+      AsyncWebParameter* p = request->getParam(i);
+      if (p->name() == "offsetL") {
+        offsetLeft = p->value().toInt();
+      } else if (p->name() == "offsetR") {
+        offsetRight = p->value().toInt();
+      } else {
+        Serial.print("unknown name: ");
+        Serial.print(p->name());
+        Serial.print(", value to int: ");
+        Serial.println(p->value().toInt());
+      }
+    }
+    if (request -> params() == 0) {
+      request->send_P(200, "text/html", webpage);
+    } else {
+      request -> send(200, "text/html", String(offsetLeft));
+    }
+    setOfsets(offsetLeft, offsetRight);
     //drawDirection();
   });
   server.begin();
