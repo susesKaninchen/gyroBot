@@ -85,6 +85,13 @@ void setOfsets(int offsetL, int offsetR) {
   EEPROM.commit();
 }
 
+String configPage() {
+  String page = String(webpage);
+  page.replace("$1$", String(offsetLeft));
+  page.replace("$2$", String(offsetRight));
+  return page;
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Setup Begin");
@@ -203,19 +210,10 @@ void setup() {
         Serial.println(p->value().toInt());
       }
     }
-    if (request -> params() == 0) {
-      request->send_P(200, "text/html", webpage);
-    } else {
-      request -> send(200, "text/html", String(offsetLeft));
-    }
+    request->send(200, "text/html", configPage());
     setOfsets(offsetLeft, offsetRight);
-    //drawDirection();
   });
   server.begin();
-  // delay(5000);
-
-  //TEST
-
   Serial.println("Setup Finished");
 }
 
